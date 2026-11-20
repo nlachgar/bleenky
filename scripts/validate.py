@@ -21,7 +21,8 @@ def validate(root=ROOT, marketing=False):
     ROOT = root
     if marketing:
         assert not (ROOT/'demos').exists(), 'Marketing source must not contain the demo destination'
-        assert 'Disallow: /' in (ROOT/'robots.txt').read_text(), 'Preserve review indexing'
+        assert 'Disallow: /' not in (ROOT/'robots.txt').read_text().splitlines(), 'Marketing site must allow crawling'
+        assert 'Sitemap: https://bleenky.com/sitemap.xml' in (ROOT/'robots.txt').read_text(), 'Missing sitemap declaration'
         assert (ROOT/'.htaccess').is_file(), 'Missing marketing routing configuration'
     for name in (MARKETING_PAGES if marketing else DEMO_PAGES):
         assert (ROOT/name).is_file(), 'Missing entrypoint: '+name
@@ -29,10 +30,14 @@ def validate(root=ROOT, marketing=False):
     for p in ROOT.rglob('*'):
         assert not p.is_symlink(), 'Symlink not permitted'
         if not p.is_file(): continue
-        assert (marketing and p.relative_to(ROOT).as_posix() in {'.htaccess','robots.txt','contact.php'}) or (p.suffix.lower() in ALLOWED and not p.name.startswith('.')), 'Unexpected public file: '+str(p)
+        assert (marketing and p.relative_to(ROOT).as_posix() in {'.htaccess','robots.txt','contact.php','sitemap.xml'}) or (p.suffix.lower() in ALLOWED and not p.name.startswith('.')), 'Unexpected public file: '+str(p)
         if p.suffix=='.html':
             page=Page();page.feed(p.read_text());refs=page.refs
-            assert page.noindex, 'Concept pages must retain noindex'
+            if marketing and p.name != '404.html':
+                assert not page.noindex, 'Public marketing pages must allow indexing'
+                assert 'data-review' not in p.read_text(), 'Remove preview banner before launch'
+            else:
+                assert page.noindex, 'Demos and error pages must retain noindex'
         elif p.suffix=='.css': refs=re.findall(r'url\([\"\']?([^\)\"\']+)',p.read_text())
         else: refs=[]
         for ref in refs:
@@ -46,7 +51,7 @@ def validate(root=ROOT, marketing=False):
             if u.fragment and dest.suffix=='.html':
                 target=Page();target.feed(dest.read_text());assert u.fragment in target.ids, 'Missing anchor: '+ref
             count+=1
-    print('Validated '+('marketing review site' if marketing else 'three demos and collection')+'; local references:',count)
+    print('Validated '+('public marketing site' if marketing else 'three demos and collection')+'; local references:',count)
 if __name__=='__main__':
     import sys
     marketing = '--marketing' in sys.argv

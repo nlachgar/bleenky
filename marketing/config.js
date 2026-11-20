@@ -1,6 +1,6 @@
-// Edit this file before launch. No build step required.
+// Public marketing-site settings. No build step required.
 window.BLEENKY = {
   contactEmail: 'hello@bleenky.com',
-  reviewMode: true,
+  reviewMode: false,
   dashboardUrl: 'https://jefferys-grooming-concept.silkydove2050.chatgpt.site/dashboard/'
 };
