@@ -14,7 +14,7 @@ function contact_validate(array $input): array {
         if ($data[$key]==='') throw new InvalidArgumentException('Please complete all required fields.');
     }
     if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n]/', $data['email'])) throw new InvalidArgumentException('Enter a valid email address.');
-    if (!in_array($data['interest'], ['Website & Care', 'Separate booking service', 'Something else'], true)) throw new InvalidArgumentException('Choose an interest from the list.');
+    if (!in_array($data['interest'], ['Website & Care', 'Separate booking service', 'Website & Booking — native', 'Website & Booking — existing platform', 'Something else'], true)) throw new InvalidArgumentException('Choose an interest from the list.');
     return $data;
 }
 
