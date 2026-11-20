@@ -14,14 +14,22 @@ class Page(HTMLParser):
         if a.get('id'): self.ids.add(a['id'])
         self.refs.extend(a[k] for k in ['href','src'] if a.get(k))
         if tag=='meta' and a.get('name')=='robots': self.noindex='noindex' in a.get('content','')
-def validate():
-    for name in ['index.html','jefferys/index.html','creative-clips/index.html','laundermutt/index.html']:
+DEMO_PAGES = ['index.html','jefferys/index.html','creative-clips/index.html','laundermutt/index.html']
+MARKETING_PAGES = ['index.html','service-guide.html','privacy.html','404.html']
+
+def validate(root=ROOT, marketing=False):
+    ROOT = root
+    if marketing:
+        assert not (ROOT/'demos').exists(), 'Marketing source must not contain the demo destination'
+        assert 'Disallow: /' in (ROOT/'robots.txt').read_text(), 'Preserve review indexing'
+        assert (ROOT/'.htaccess').is_file(), 'Missing marketing routing configuration'
+    for name in (MARKETING_PAGES if marketing else DEMO_PAGES):
         assert (ROOT/name).is_file(), 'Missing entrypoint: '+name
     count=0
     for p in ROOT.rglob('*'):
         assert not p.is_symlink(), 'Symlink not permitted'
         if not p.is_file(): continue
-        assert p.suffix.lower() in ALLOWED and not p.name.startswith('.'), 'Unexpected public file: '+str(p)
+        assert (marketing and p.relative_to(ROOT).as_posix() in {'.htaccess','robots.txt'}) or (p.suffix.lower() in ALLOWED and not p.name.startswith('.')), 'Unexpected public file: '+str(p)
         if p.suffix=='.html':
             page=Page();page.feed(p.read_text());refs=page.refs
             assert page.noindex, 'Concept pages must retain noindex'
@@ -30,13 +38,16 @@ def validate():
         for ref in refs:
             u=urlsplit(ref)
             if u.scheme or u.netloc: continue
-            assert not u.path.startswith('/'), 'Use relative paths: '+ref
-            dest=(p.parent/unquote(u.path)).resolve() if u.path else p.resolve()
+            assert marketing or not u.path.startswith('/'), 'Use relative paths: '+ref
+            dest=((ROOT/unquote(u.path).lstrip('/')) if u.path.startswith('/') else (p.parent/unquote(u.path))).resolve() if u.path else p.resolve()
             assert dest.is_relative_to(ROOT.resolve()), 'Reference outside site: '+ref
             if dest.is_dir(): dest=dest/'index.html'
             assert dest.is_file(), 'Missing asset: '+str(dest)
             if u.fragment and dest.suffix=='.html':
                 target=Page();target.feed(dest.read_text());assert u.fragment in target.ids, 'Missing anchor: '+ref
             count+=1
-    print('Validated three demos and collection; local references:',count)
-if __name__=='__main__': validate()
+    print('Validated '+('marketing review site' if marketing else 'three demos and collection')+'; local references:',count)
+if __name__=='__main__':
+    import sys
+    marketing = '--marketing' in sys.argv
+    validate(ROOT.parent/'marketing' if marketing else ROOT, marketing)

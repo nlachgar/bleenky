@@ -1,4 +1,4 @@
-# Bleenky demo deployment
+# Bleenky website deployment
 
 Dedicated repository for the three static grooming concepts. Edit `site/` here for future Hostinger deployments. This is a snapshot of the prepared upload package; edits to older workspace copies do not automatically sync into this repository.
 
@@ -49,3 +49,13 @@ For normal content rollback, revert the unwanted Git commit on main; the next de
 Deployment is connected and enabled for `https://demos.bleenky.com/`. On November 20, 2026, the GitHub Actions dry run and live deployment succeeded, including all four public HTML checks. Changes pushed to `main` now validate and deploy automatically. See [the first successful live run](https://github.com/nlachgar/bleenky/actions/runs/44809330824).
 
 References: [Hostinger SSH setup](https://www.hostinger.com/support/1583645-how-to-enable-ssh-access-in-hostinger/), [Hostinger rsync](https://www.hostinger.com/support/how-to-use-rsync-to-sync-files-and-directories-at-hostinger/), [GitHub Actions secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
+
+## Main marketing site
+
+`marketing/` is the canonical source for https://bleenky.com/. The older `bleenky-website/upload/` package is an archive and does not sync automatically. The `site/` directory continues to serve https://demos.bleenky.com/.
+
+The same workflow deploys demos first, then marketing. Both use the existing SSH secrets and deployment-enabled variable; no Hostinger GitHub app or extra secrets are needed. For marketing, `DEPLOY_SITE=marketing` requires the configured demo destination to be exactly `/home/USER/domains/bleenky.com/public_html/demos` and derives its parent as the root destination. Marketing uploads exclude `/demos/` and never delete remote files. Each destination has a separate changed-file backup directory outside the web root.
+
+The main site is published as a review copy: `marketing/config.js` retains `reviewMode: true`, the inquiry email is blank, draft pricing/terms remain labeled, and noindex/robots restrictions remain active. Contact details and launch terms still need finalization. Billing and automated trials remain on hold. Demo links now use the branded subdomain; salon sign-in still uses the existing Sites platform.
+
+Validate with `python3 scripts/validate.py --marketing`. Manual workflow runs default to dry-run for both destinations. Public verification checks the homepage, service guide, privacy page and 404 document. This does not constitute a new mobile/browser interaction audit. The root `.htaccess` sets the index and 404 handler without changing demo routing. Rollback by reverting the relevant source commit; deleting a newly introduced remote file still requires separate review.

@@ -41,4 +41,25 @@ class DeploymentTests(unittest.TestCase):
   with patch.dict(os.environ,dict(CONFIG,DRY_RUN='false'),clear=True),patch('deploy.subprocess.run'),patch('deploy.urlopen') as web:
    web.return_value.__enter__.return_value.read.side_effect=[(deploy.ROOT/route/'index.html').read_bytes() for route in ['', 'jefferys','creative-clips','laundermutt']]
    deploy.main();self.assertEqual(web.call_count,4)
+ def test_marketing_target_is_exact_parent_only(self):
+  c=deploy.settings(dict(CONFIG,DEPLOY_SITE='marketing'))
+  self.assertEqual(c['HOSTINGER_TARGET_DIR'],'/home/u123/domains/bleenky.com/public_html')
+  self.assertEqual(c['DEMO_BASE_URL'],'https://bleenky.com/')
+  for target in ['/home/u123/domains/other.com/public_html/demos','/home/u123/domains/bleenky.com/public_html','/home/u123/domains/bleenky.com/public_html/demos/other']:
+   with self.assertRaises(ValueError): deploy.settings(dict(CONFIG,DEPLOY_SITE='marketing',HOSTINGER_TARGET_DIR=target))
+ def test_unknown_profile_rejected(self):
+  with self.assertRaises(ValueError): deploy.settings(dict(CONFIG,DEPLOY_SITE='typo'))
+ def test_marketing_dry_run_protects_demos(self):
+  with patch.dict(os.environ,dict(CONFIG,DEPLOY_SITE='marketing',DRY_RUN='true'),clear=True),patch('deploy.subprocess.run') as run,patch('deploy.urlopen') as web:
+   deploy.main();args=run.call_args_list[-1].args[0]
+   self.assertIn('--exclude=/demos/',args)
+   self.assertIn('--dry-run',args);self.assertNotIn('--delete',args)
+   self.assertTrue(args[-2].endswith('/marketing/'))
+   self.assertEqual(args[-1],'u123@example.com:/home/u123/domains/bleenky.com/public_html/')
+   web.assert_not_called()
+ def test_marketing_checks_all_four_pages(self):
+  with patch.dict(os.environ,dict(CONFIG,DEPLOY_SITE='marketing',DRY_RUN='false'),clear=True),patch('deploy.subprocess.run'),patch('deploy.urlopen') as web:
+   web.return_value.__enter__.return_value.read.side_effect=[(deploy.ROOT.parent/'marketing'/p).read_bytes() for p in deploy.MARKETING_PAGES]
+   deploy.main();self.assertEqual(web.call_count,4)
+   self.assertEqual(web.call_args_list[1].args[0].full_url,'https://bleenky.com/service-guide.html?bleenky_deploy=123')
 if __name__=='__main__': unittest.main()

@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import urlopen, Request
 import os, re, shlex, subprocess, tempfile, time, hashlib
-from validate import validate, ROOT
+from validate import validate, ROOT, DEMO_PAGES, MARKETING_PAGES
 
 def settings(env):
     required=['HOSTINGER_HOST','HOSTINGER_USER','HOSTINGER_PORT','HOSTINGER_SSH_KEY','HOSTINGER_KNOWN_HOSTS','HOSTINGER_TARGET_DIR','DEMO_BASE_URL']
@@ -22,10 +22,22 @@ def settings(env):
     if u.scheme!='https' or not u.hostname or u.username or u.password or u.query or u.fragment:
         raise ValueError('DEMO_BASE_URL must be an HTTPS URL without credentials, query or fragment')
     c['DEMO_BASE_URL']=c['DEMO_BASE_URL'].rstrip('/')+'/'
+    profile=env.get('DEPLOY_SITE','demos')
+    if profile not in {'demos','marketing'}: raise ValueError('Unknown deployment site')
+    c['DEPLOY_SITE']=profile
+    if profile=='marketing':
+        expected='/home/'+c['HOSTINGER_USER']+'/domains/bleenky.com/public_html/demos'
+        if target!=expected: raise ValueError('Marketing deployment requires the exact Bleenky demo destination')
+        c['HOSTINGER_TARGET_DIR']=target.removesuffix('/demos')
+        c['DEMO_BASE_URL']='https://bleenky.com/'
     return c
 
 def main():
-    validate();c=settings(os.environ);dry=os.environ.get('DRY_RUN','true')=='true'
+    c=settings(os.environ);dry=os.environ.get('DRY_RUN','true')=='true'
+    marketing=c['DEPLOY_SITE']=='marketing'
+    root=ROOT.parent/'marketing' if marketing else ROOT
+    pages=MARKETING_PAGES if marketing else DEMO_PAGES
+    validate(root, marketing)
     target=c['HOSTINGER_TARGET_DIR'];remote=c['HOSTINGER_USER']+'@'+c['HOSTINGER_HOST']
     run=os.environ.get('GITHUB_RUN_ID',str(int(time.time())))
     attempt=os.environ.get('GITHUB_RUN_ATTEMPT','1')
@@ -40,15 +52,17 @@ def main():
         # Require an existing destination; a typo must not silently create another site.
         subprocess.run(ssh+[remote,'test -d '+shlex.quote(target)],check=True)
         args=['rsync','-rzp','--checksum','--itemize-changes','--delay-updates','--chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r','--backup','--backup-dir='+backup]
+        if marketing: args+=['--exclude=/demos/']
         if dry: args.append('--dry-run')
         # Deliberately no --delete: unrelated files in the hosting directory are preserved.
-        args+=['-e',shlex.join(ssh),str(ROOT)+'/',remote+':'+target+'/']
+        args+=['-e',shlex.join(ssh),str(root)+'/',remote+':'+target+'/']
         subprocess.run(args,check=True)
     if dry:
         print('Dry run complete. No website files changed.');return
     # Verify exact deployed HTML, not just a 200 response from an unrelated page.
-    for route in ['', 'jefferys/', 'creative-clips/', 'laundermutt/']:
-        expected=(ROOT/route/'index.html').read_bytes();verified=False
+    for page in pages:
+        route=page.removesuffix('index.html')
+        expected=(root/page).read_bytes();verified=False
         for n in range(3):
             request=Request(c['DEMO_BASE_URL']+route+'?bleenky_deploy='+run,headers={'Cache-Control':'no-cache'})
             try:

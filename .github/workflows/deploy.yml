@@ -1,4 +1,4 @@
-name: Validate and deploy demos
+name: Validate and deploy Bleenky sites
 
 on:
   push:
@@ -27,9 +27,10 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 scripts/validate.py
+      - run: python3 scripts/validate.py --marketing
       - run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Check JavaScript syntax
-        run: find site -name '*.js' -print0 | xargs -0 -r -n 1 node --check
+        run: find site marketing -name '*.js' -print0 | xargs -0 -r -n 1 node --check
 
   deploy:
     needs: validate
@@ -49,5 +50,17 @@ jobs:
           HOSTINGER_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
           HOSTINGER_TARGET_DIR: ${{ vars.HOSTINGER_TARGET_DIR }}
           DEMO_BASE_URL: ${{ vars.DEMO_BASE_URL }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+        run: python3 scripts/deploy.py
+      - name: Upload marketing site to bleenky.com
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_USER: ${{ secrets.HOSTINGER_USER }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+          HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          HOSTINGER_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+          HOSTINGER_TARGET_DIR: ${{ vars.HOSTINGER_TARGET_DIR }}
+          DEMO_BASE_URL: ${{ vars.DEMO_BASE_URL }}
+          DEPLOY_SITE: marketing
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
         run: python3 scripts/deploy.py
