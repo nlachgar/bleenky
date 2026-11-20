@@ -71,5 +71,5 @@ def main():
             except Exception: pass
             if n<2: time.sleep(5)
         if not verified: raise RuntimeError('Upload finished but live HTML verification failed for '+route+'; check DNS, SSL, path and caching. No automatic rollback performed.')
-    print('Deployment and four live HTML checks passed. Replaced files backed up outside the web root.')
+    print(f'Deployment and {len(pages)} live HTML checks passed. Replaced files backed up outside the web root.')
 if __name__=='__main__': main()

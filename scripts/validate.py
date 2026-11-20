@@ -14,7 +14,7 @@ class Page(HTMLParser):
         if a.get('id'): self.ids.add(a['id'])
         self.refs.extend(a[k] for k in ['href','src'] if a.get(k))
         if tag=='meta' and a.get('name')=='robots': self.noindex='noindex' in a.get('content','')
-DEMO_PAGES = ['index.html','jefferys/index.html','creative-clips/index.html','laundermutt/index.html']
+DEMO_PAGES = ['index.html','jefferys/index.html','creative-clips/index.html','laundermutt/index.html','marlow-moss/index.html','clovercoat/index.html','puddle-puff/index.html']
 MARKETING_PAGES = ['index.html','service-guide.html','privacy.html','404.html']
 
 def validate(root=ROOT, marketing=False):

@@ -39,8 +39,8 @@ class DeploymentTests(unittest.TestCase):
    self.assertNotIn('--dry-run',run.call_args_list[-1].args[0])
  def test_live_deployment_checks_all_four_pages(self):
   with patch.dict(os.environ,dict(CONFIG,DRY_RUN='false'),clear=True),patch('deploy.subprocess.run'),patch('deploy.urlopen') as web:
-   web.return_value.__enter__.return_value.read.side_effect=[(deploy.ROOT/route/'index.html').read_bytes() for route in ['', 'jefferys','creative-clips','laundermutt']]
-   deploy.main();self.assertEqual(web.call_count,4)
+   web.return_value.__enter__.return_value.read.side_effect=[(deploy.ROOT/page).read_bytes() for page in deploy.DEMO_PAGES]
+   deploy.main();self.assertEqual(web.call_count,len(deploy.DEMO_PAGES))
  def test_marketing_target_is_exact_parent_only(self):
   c=deploy.settings(dict(CONFIG,DEPLOY_SITE='marketing'))
   self.assertEqual(c['HOSTINGER_TARGET_DIR'],'/home/u123/domains/bleenky.com/public_html')
