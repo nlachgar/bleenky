@@ -14,7 +14,7 @@ class Page(HTMLParser):
         if a.get('id'): self.ids.add(a['id'])
         self.refs.extend(a[k] for k in ['href','src'] if a.get(k))
         if tag=='meta' and a.get('name')=='robots': self.noindex='noindex' in a.get('content','')
-DEMO_PAGES = ['index.html','jefferys/index.html','creative-clips/index.html','laundermutt/index.html','marlow-moss/index.html','clovercoat/index.html','puddle-puff/index.html']
+DEMO_PAGES = ['index.html','jefferys/index.html','creative-clips/index.html','laundermutt/index.html','marlow-moss/index.html','clovercoat/index.html','puddle-puff/index.html','reviews/creative-clips/index.html','reviews/jefferys/index.html','reviews/penngrove-pets/index.html','reviews/dirty-dog-salon/index.html','reviews/shear-canine/index.html']
 MARKETING_PAGES = ['index.html','service-guide.html','privacy.html','404.html']
 
 def validate(root=ROOT, marketing=False):
@@ -51,7 +51,7 @@ def validate(root=ROOT, marketing=False):
             if u.fragment and dest.suffix=='.html':
                 target=Page();target.feed(dest.read_text());assert u.fragment in target.ids, 'Missing anchor: '+ref
             count+=1
-    print('Validated '+('public marketing site' if marketing else 'three demos and collection')+'; local references:',count)
+    print('Validated '+('public marketing site' if marketing else 'demo collection and prospect previews')+'; local references:',count)
 if __name__=='__main__':
     import sys
     marketing = '--marketing' in sys.argv
