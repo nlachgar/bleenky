@@ -46,6 +46,6 @@ For normal content rollback, revert the unwanted Git commit on main; the next de
 
 ## Current setup status
 
-Destination selected: `https://demos.bleenky.com/`. Hostinger SSH is not yet available. Leave `HOSTINGER_DEPLOY_ENABLED` unset or false until SSH credentials, the exact subdomain document root and SSL are configured. First dry-run and first live deployment remain pending.
+Deployment is connected and enabled for `https://demos.bleenky.com/`. On November 20, 2026, the GitHub Actions dry run and live deployment succeeded, including all four public HTML checks. Changes pushed to `main` now validate and deploy automatically. See [the first successful live run](https://github.com/nlachgar/bleenky/actions/runs/44809330824).
 
 References: [Hostinger SSH setup](https://www.hostinger.com/support/1583645-how-to-enable-ssh-access-in-hostinger/), [Hostinger rsync](https://www.hostinger.com/support/how-to-use-rsync-to-sync-files-and-directories-at-hostinger/), [GitHub Actions secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
