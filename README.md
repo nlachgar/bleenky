@@ -63,3 +63,9 @@ Validate with `python3 scripts/validate.py --marketing`. Manual workflow runs de
 ## Fictional marketing demos
 
 The marketing page and demo collection link to Marlow & Moss (`marlow-moss/`), Clovercoat (`clovercoat/`), and Puddle & Puff (`puddle-puff/`). These are invented demonstration brands with no real contact details. Original prospect-specific demos remain at their existing URLs but are not linked from the marketing collection. Marketing preview screenshots are rendered from the fictional versions.
+
+## Interest form
+
+Primary contact CTAs open the interest form; hello@bleenky.com remains a secondary mailto link. `marketing/contact.php` sends a fixed-recipient notification through Hostinger PHP mail, with the validated visitor address as Reply-To. No SMTP password is stored in source. Hostinger PHP mail has provider limits and inbox delivery must be checked; a successful send means the mail server accepted the message, not that the inbox received it.
+
+The endpoint validates input, uses secure same-site session cookies and CSRF tokens, a honeypot, request-size limits and per-IP/global throttling. It stores only hashes and timestamps in a private `.bleenky-contact-state` directory outside the web root; old entries expire after one hour and are pruned on subsequent accepted submissions. No inquiry bodies are stored on disk by the app. Mail remains in the inbox under the owner's retention practices. Failed submissions preserve entered values and show a direct email fallback. `php scripts/test_contact.php` tests backend behavior without sending messages.

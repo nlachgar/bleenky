@@ -29,7 +29,7 @@ def validate(root=ROOT, marketing=False):
     for p in ROOT.rglob('*'):
         assert not p.is_symlink(), 'Symlink not permitted'
         if not p.is_file(): continue
-        assert (marketing and p.relative_to(ROOT).as_posix() in {'.htaccess','robots.txt'}) or (p.suffix.lower() in ALLOWED and not p.name.startswith('.')), 'Unexpected public file: '+str(p)
+        assert (marketing and p.relative_to(ROOT).as_posix() in {'.htaccess','robots.txt','contact.php'}) or (p.suffix.lower() in ALLOWED and not p.name.startswith('.')), 'Unexpected public file: '+str(p)
         if p.suffix=='.html':
             page=Page();page.feed(p.read_text());refs=page.refs
             assert page.noindex, 'Concept pages must retain noindex'

@@ -4,13 +4,26 @@ if(toggle&&nav){toggle.addEventListener('click',()=>{const open=toggle.getAttrib
 document.querySelectorAll('[data-year]').forEach(el=>el.textContent=new Date().getFullYear());
 if(config.reviewMode===false)document.querySelectorAll('[data-review]').forEach(el=>el.hidden=true);
 if(config.dashboardUrl?.startsWith('https://'))document.querySelectorAll('[data-dashboard]').forEach(a=>a.href=config.dashboardUrl);
-const email=typeof config.contactEmail==='string'?config.contactEmail.trim():'';
-let selectedPlan='',opener=null;
-const dialog=document.querySelector('#contact-dialog');
-function emailLink(){return 'mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent('Bleenky inquiry'+(selectedPlan?' — '+selectedPlan:''))+'&body='+encodeURIComponent('Hi Bleenky,\n\nSalon name:\nLocation:\nCurrent website (if any):\nHow we currently take appointments:\nWhat we would like help with:\n\nThanks!');}
-function setContact(){document.querySelectorAll('[data-contact]').forEach(a=>a.href=email?emailLink():'#contact');}
-setContact();
-document.querySelectorAll('[data-plan]').forEach(a=>a.addEventListener('click',()=>{selectedPlan=a.dataset.plan;setContact();}));
-document.querySelectorAll('[data-contact]').forEach(a=>a.addEventListener('click',e=>{if(email)return;e.preventDefault();opener=a;if(dialog){dialog.showModal();dialog.querySelector('button').focus();}}));
-if(!email)document.querySelectorAll('[data-contact-note]').forEach(el=>el.textContent='Inquiries open after the contact address is connected.');
-if(dialog){document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>dialog.close()));dialog.addEventListener('close',()=>opener?.focus());}
+const interestForm=document.querySelector('#interest-form');
+if(interestForm){
+ const status=document.querySelector('#form-status'),submit=interestForm.querySelector('[type="submit"]');
+ let token='',sending=false;
+ async function prepareForm(){
+  try{const response=await fetch('contact.php',{credentials:'same-origin',cache:'no-store'});const result=await response.json();if(!response.ok||!result.token)throw new Error();token=result.token;submit.disabled=false;status.textContent='';}
+  catch{status.textContent='The form is temporarily unavailable. Please use the email link instead.';}
+ }
+ document.querySelectorAll('[data-interest]').forEach(link=>link.addEventListener('click',()=>{document.querySelector('#contact-interest').value=link.dataset.interest;}));
+ document.querySelectorAll('a[href="#contact"]').forEach(link=>link.addEventListener('click',()=>{setTimeout(()=>document.querySelector('#contact-name').focus({preventScroll:true}),100);}));
+ interestForm.addEventListener('submit',async event=>{
+  event.preventDefault();if(sending||!token||!interestForm.reportValidity())return;
+  sending=true;submit.disabled=true;submit.textContent='Sending…';status.textContent='Sending your inquiry…';status.classList.remove('is-error','is-success');
+  try{
+   const payload=Object.fromEntries(new FormData(interestForm));payload.token=token;
+   const response=await fetch('contact.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+   const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Your inquiry could not be sent. Please try again or email us.');
+   status.textContent=result.message;status.classList.add('is-success');interestForm.reset();token='';submit.textContent='Inquiry sent';
+  }catch(error){status.textContent=error.message||'We could not connect. Please retry or use the email link.';status.classList.add('is-error');submit.disabled=false;submit.textContent='Send my inquiry';}
+  finally{sending=false;}
+ });
+ prepareForm();
+}
