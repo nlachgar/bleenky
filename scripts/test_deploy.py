@@ -23,6 +23,8 @@ class DeploymentTests(unittest.TestCase):
    self.assertEqual(run.call_count,2)
    args=run.call_args_list[-1].args[0]
    self.assertIn('--dry-run',args);self.assertNotIn('--delete',args)
+   self.assertIn('-rzp',args)  # Apply readable permissions even with Hostinger's restrictive umask.
+   self.assertIn('--chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r',args)
    self.assertIn('StrictHostKeyChecking=yes',run.call_args_list[0].args[0])
    self.assertIn('UserKnownHostsFile=', ' '.join(run.call_args_list[0].args[0]))
    web.assert_not_called()

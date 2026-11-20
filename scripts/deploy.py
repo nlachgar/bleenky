@@ -39,7 +39,7 @@ def main():
         ssh=['ssh','-i',str(key),'-p',c['HOSTINGER_PORT'],'-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile='+str(hosts),'-o','ConnectTimeout=20']
         # Require an existing destination; a typo must not silently create another site.
         subprocess.run(ssh+[remote,'test -d '+shlex.quote(target)],check=True)
-        args=['rsync','-rz','--checksum','--itemize-changes','--delay-updates','--chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r','--backup','--backup-dir='+backup]
+        args=['rsync','-rzp','--checksum','--itemize-changes','--delay-updates','--chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r','--backup','--backup-dir='+backup]
         if dry: args.append('--dry-run')
         # Deliberately no --delete: unrelated files in the hosting directory are preserved.
         args+=['-e',shlex.join(ssh),str(ROOT)+'/',remote+':'+target+'/']
