@@ -66,6 +66,15 @@ The marketing page and demo collection link to Marlow & Moss (`marlow-moss/`), C
 
 ## Interest form
 
-Primary contact CTAs open the interest form; hello@bleenky.com remains a secondary mailto link. `marketing/contact.php` sends a fixed-recipient notification through Hostinger PHP mail, with the validated visitor address as Reply-To. No SMTP password is stored in source. Hostinger PHP mail has provider limits and inbox delivery must be checked; a successful send means the mail server accepted the message, not that the inbox received it.
+Primary contact CTAs open the interest form; hello@bleenky.com remains a secondary mailto link. `marketing/contact.php` sends a fixed-recipient notification with the validated visitor address as Reply-To. Once private credentials are configured it uses authenticated Hostinger SMTP through PHPMailer, port 465 with certificate verification. Before initial setup only, it retains PHP mail. SMTP errors or invalid credentials never fall back to PHP mail. A successful send means the server accepted the message; inbox placement still needs testing. No SMTP password is stored in source.
 
 The endpoint validates input, uses secure same-site session cookies and CSRF tokens, a honeypot, request-size limits and per-IP/global throttling. It stores only hashes and timestamps in a private `.bleenky-contact-state` directory outside the web root; old entries expire after one hour and are pruned on subsequent accepted submissions. No inquiry bodies are stored on disk by the app. Mail remains in the inbox under the owner's retention practices. Failed submissions preserve entered values and show a direct email fallback. `php scripts/test_contact.php` tests backend behavior without sending messages.
+
+
+### Private SMTP setup
+
+The Hostinger home directory `/home/u496265211/.bleenky-mail` has mode 0700. It contains PHPMailer dependencies, CLI-only `setup.php`, and (after activation) `config.json` with mode 0600. None are inside `public_html`; GitHub deployment does not touch them. `mail-runtime/composer.lock` records the installed dependency version. Never put credentials in Git, browser JavaScript, logs, command arguments, or chat.
+
+From the local checkout, run `python3 scripts/configure_smtp.py` directly in Terminal. The helper uses hidden password prompts and sends the credentials through stdin over SSH with the existing pinned host key. Server setup tests TLS and SMTP authentication without sending email, then atomically saves the private config. A failed login leaves existing configuration intact. Rerun the helper after changing the mailbox password. After activation, submit one labeled inquiry through the live form and verify inbox placement and Reply-To.
+
+Server recovery: create the private directory with mode 0700; copy `mail-runtime/composer.json` and `composer.lock` into it, then run `composer install --no-dev --no-plugins --no-scripts --prefer-dist` and `composer audit --no-dev` there. Copy `scripts/setup_smtp.php` to that directory as `setup.php` with mode 0600. Deploy the current contact endpoint before running the password helper. Do not place this directory in the public upload package. To pause sending, retain the config and disable the form; deleting the config returns to the pre-activation PHP-mail behavior.

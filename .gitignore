@@ -8,3 +8,6 @@ __pycache__/
 dist/
 
 .deploy-secrets/
+
+mail-runtime/vendor/
+mail-runtime/config.json

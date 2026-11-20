@@ -31,6 +31,50 @@ function contact_send(array $data, callable $send): bool {
     ]);
 }
 
+// Credentials and dependencies live outside public_html and outside Git.
+function contact_smtp_mailer(array $config, ?callable $factory = null): object {
+    if (($config['username'] ?? '') !== 'hello@bleenky.com' || !is_string($config['password'] ?? null) || $config['password'] === '' || strlen($config['password']) > 1024) {
+        throw new RuntimeException('SMTP configuration unavailable');
+    }
+    $mailer = $factory ? $factory() : new \PHPMailer\PHPMailer\PHPMailer(true);
+    $mailer->isSMTP();
+    $mailer->Host = 'smtp.hostinger.com';
+    $mailer->Port = 465;
+    $mailer->SMTPSecure = 'ssl';
+    $mailer->SMTPAuth = true;
+    $mailer->Username = $config['username'];
+    $mailer->Password = $config['password'];
+    $mailer->SMTPDebug = 0;
+    $mailer->Timeout = 20;
+    $mailer->CharSet = 'UTF-8';
+    $mailer->SMTPOptions = ['ssl'=>['verify_peer'=>true, 'verify_peer_name'=>true, 'allow_self_signed'=>false]];
+    $mailer->setFrom('hello@bleenky.com', 'Bleenky Website');
+    $mailer->addAddress('hello@bleenky.com');
+    return $mailer;
+}
+
+function contact_smtp_send(object $mailer, string $subject, string $body, string $replyTo): bool {
+    $mailer->addReplyTo($replyTo);
+    $mailer->Subject = $subject;
+    $mailer->Body = $body;
+    $mailer->isHTML(false);
+    return $mailer->send();
+}
+
+function contact_deliver(array $data, string $directory): bool {
+    // Preserve existing delivery until the credential setup succeeds. Never fall
+    // back to unauthenticated mail after SMTP is configured or fails.
+    $file = $directory.'/config.json';
+    if (!file_exists($file)) {
+        return contact_send($data, fn($to,$subject,$body,$headers)=>mail($to,$subject,$body,$headers,'-fhello@bleenky.com'));
+    }
+    if (is_link($file) || (fileperms($file) & 0077) !== 0) throw new RuntimeException('Unsafe SMTP configuration permissions');
+    $config = json_decode(file_get_contents($file), true, 8, JSON_THROW_ON_ERROR);
+    require_once $directory.'/vendor/autoload.php';
+    $mailer = contact_smtp_mailer($config);
+    return contact_send($data, fn($to,$subject,$body,$headers)=>contact_smtp_send($mailer,$subject,$body,$headers['Reply-To']));
+}
+
 // Store only short-lived rate-limit timestamps and hashed addresses, never inquiry bodies.
 function contact_rate_limit(string $directory, string $ip, int $now): bool {
     if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) throw new RuntimeException('Rate limiter unavailable');
@@ -74,7 +118,7 @@ try {
     if (!is_string($input['token']??null) || empty($_SESSION['contact_token']) || !hash_equals($_SESSION['contact_token'],$input['token'])) contact_reply(403,['error'=>'Your form session expired. Please refresh and try again.']);
     $data = contact_validate($input);
     if (!contact_rate_limit(dirname(__DIR__,3).'/.bleenky-contact-state', $_SERVER['REMOTE_ADDR']??'unknown', time())) contact_reply(429,['error'=>'Too many attempts. Please wait an hour or email hello@bleenky.com.']);
-    if (!contact_send($data, fn($to,$subject,$body,$headers)=>mail($to,$subject,$body,$headers,'-fhello@bleenky.com'))) contact_reply(503,['error'=>'We could not send your inquiry. Your details are still here; please retry or email hello@bleenky.com.']);
+    if (!contact_deliver($data, dirname(__DIR__,3).'/.bleenky-mail')) contact_reply(503,['error'=>'We could not send your inquiry. Your details are still here; please retry or email hello@bleenky.com.']);
     unset($_SESSION['contact_token']);
     contact_reply(200,['ok'=>true,'message'=>'Thanks! Your inquiry has been sent. We aim to reply within two business days. If you do not hear from us, email hello@bleenky.com.']);
 } catch (InvalidArgumentException $e) {contact_reply(422,['error'=>$e->getMessage()]);}
